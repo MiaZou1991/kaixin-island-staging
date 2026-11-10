@@ -93,3 +93,40 @@ jobs:
       - name: Publish only the test repository
         id: deployment
         uses: actions/deploy-pages@v4
+
+  smoke:
+    name: Check public KAIXIN V2 staging site over HTTPS
+    needs: deploy
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify deployed HTTPS site, pages, and JavaScript
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://miazou1991.github.io/kaixin-island-staging"
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          for i in $(seq 1 12); do
+            if curl -fsSL --max-time 20 "$base/index.html" -o "$tmp/index.html" && grep -q "KAIXIN" "$tmp/index.html"; then
+              break
+            fi
+            if [ "$i" -eq 12 ]; then
+              echo 'STAGING_HTTPS_NOT_READY: index.html failed to load with correct content'
+              exit 1
+            fi
+            sleep 5
+          done
+          for path in child.html parent.html kaixin-stage-auth.js kaixin-stage-sync.js v2-operation-engine.js kaixin-staging-onboarding-flow.js; do
+            curl -fsSL --retry 4 --retry-delay 3 --max-time 30 "$base/$path" -o "$tmp/$path"
+            test -s "$tmp/$path"
+          done
+          grep -q 'kaixin-stage-sync.js' "$tmp/child.html"
+          grep -q 'kaixin-stage-sync.js' "$tmp/parent.html"
+          grep -q 'kaixin-island-staging' "$tmp/kaixin-stage-auth.js"
+          grep -q 'tgnznizqhheiwgdhvwdc' "$tmp/kaixin-stage-sync.js"
+          if grep -R -q 'syqcpfjudjniripzcjdq' "$tmp"; then
+            echo 'Refusing live QA: production Supabase backend reference detected'
+            exit 1
+          fi
+          echo 'PASS: live KAIXIN staging HTTPS 200, full pages/scripts, staging-only backend'
