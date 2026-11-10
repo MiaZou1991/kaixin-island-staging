@@ -124,7 +124,7 @@ jobs:
           grep -q 'kaixin-stage-sync.js' "$tmp/child.html"
           grep -q 'kaixin-stage-sync.js' "$tmp/parent.html"
           grep -q 'kaixin-island-staging' "$tmp/kaixin-stage-auth.js"
-          grep -q 'tgnznizqhheiwgdhvwdc' "$tmp/kaixin-stage-sync.js"
+          grep -q 'tgnznizqhheiwgdhvwdc' "$tmp/kaixin-stage-auth.js"
           if grep -R -q 'syqcpfjudjniripzcjdq' "$tmp"; then
             echo 'Refusing live QA: production Supabase backend reference detected'
             exit 1
