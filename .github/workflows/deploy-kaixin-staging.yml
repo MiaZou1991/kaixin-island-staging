@@ -1,0 +1,95 @@
+name: KAIXIN V2 - isolated staging Pages
+
+# This workflow belongs to the TEST repo only. It never deploys to the
+# production repository, and pins its upstream source to an approved commit.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kaixin-isolated-pages
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify isolated V2 static site
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout pinned public staging code (NOT production main)
+        uses: actions/checkout@v4
+        with:
+          repository: MiaZou1991/homework-island-demo
+          ref: d1154b0d352d57d440685182024c0d6c70978b5d
+          path: upstream
+          persist-credentials: false
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify merge safety and build the complete KAIXIN test site
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd upstream
+          node checks/v2-operation-engine.cjs
+          node --check dist/kaixin-stage-auth.js
+          node --check dist/kaixin-stage-sync.js
+          node checks/build-kaixin-staging.cjs
+          test -s build/kaixin-staging/child.html
+          test -s build/kaixin-staging/parent.html
+          test -s build/kaixin-staging/index.html
+          test -s build/kaixin-staging/kaixin-stage-auth.js
+          test -s build/kaixin-staging/kaixin-stage-sync.js
+          if grep -R -q 'syqcpfjudjniripzcjdq' build/kaixin-staging; then
+            echo 'Refusing test deployment: production Supabase ref found'
+            exit 1
+          fi
+          if grep -E -q 'src="(cloud-sync|family-access|realtime-signal)\.js' build/kaixin-staging/child.html build/kaixin-staging/parent.html; then
+            echo 'Refusing test deployment: legacy unauthenticated code included'
+            exit 1
+          fi
+          grep -q 'kaixin-island-staging' build/kaixin-staging/kaixin-stage-auth.js
+          echo 'PASS: isolated KAIXIN V2 package built from pinned commit; no production backend'
+      - name: Save public static files for staging-only Pages deployment
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: kaixin-v2-staging-public-site
+          path: upstream/build/kaixin-staging/
+          retention-days: 3
+          if-no-files-found: error
+          include-hidden-files: true
+
+  deploy:
+    name: Deploy ONLY to kaixin-island-staging Pages
+    needs: verify
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && github.repository == 'MiaZou1991/kaixin-island-staging'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Get verified test static files
+        uses: actions/download-artifact@v4
+        with:
+          name: kaixin-v2-staging-public-site
+          path: public
+      - name: Configure this TEST repository's Pages (needs Pages Source = GitHub Actions)
+        uses: actions/configure-pages@v5
+      - name: Upload isolated KAIXIN test site to Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+      - name: Publish only the test repository
+        id: deployment
+        uses: actions/deploy-pages@v4
