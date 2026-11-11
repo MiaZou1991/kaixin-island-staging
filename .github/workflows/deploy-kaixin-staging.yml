@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: MiaZou1991/homework-island-demo
-          ref: 088d7b29a36f3ca80a3ebe9574f68208baa38947
+          ref: 3ac678438170934e9f6589783339fcf669dda9ad
           path: upstream
           persist-credentials: false
       - name: Use Node.js 22
