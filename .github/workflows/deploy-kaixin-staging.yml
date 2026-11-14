@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: MiaZou1991/homework-island-demo
-          ref: adf6ddfe4df2c358fb60170dfb069f983e2a2a53
+          ref: 0c7105832215825b4bcd67b006004c3d86eef75c
           path: upstream
           persist-credentials: false
       - name: Use Node.js 22
@@ -52,6 +52,9 @@ jobs:
           test -s build/kaixin-staging/index.html
           test -s build/kaixin-staging/kaixin-stage-auth.js
           test -s build/kaixin-staging/kaixin-stage-sync.js
+          test -s build/kaixin-staging/kaixin-stage-sync-ui.js
+          grep -q 'kaixin-stage-sync-ui.js' build/kaixin-staging/child.html
+          grep -q 'kaixin-stage-sync-ui.js' build/kaixin-staging/parent.html
           if grep -R -q 'syqcpfjudjniripzcjdq' build/kaixin-staging; then
             echo 'Refusing test deployment: production Supabase ref found'
             exit 1
@@ -123,12 +126,14 @@ jobs:
             fi
             sleep 5
           done
-          for path in child.html parent.html kaixin-stage-auth.js kaixin-stage-sync.js v2-operation-engine.js kaixin-staging-onboarding-flow.js; do
+          for path in child.html parent.html kaixin-stage-auth.js kaixin-stage-sync.js kaixin-stage-sync-ui.js v2-operation-engine.js kaixin-staging-onboarding-flow.js; do
             curl -fsSL --retry 4 --retry-delay 3 --max-time 30 "$base/$path" -o "$tmp/$path"
             test -s "$tmp/$path"
           done
           grep -q 'kaixin-stage-sync.js' "$tmp/child.html"
           grep -q 'kaixin-stage-sync.js' "$tmp/parent.html"
+          grep -q 'kaixin-stage-sync-ui.js' "$tmp/child.html"
+          grep -q 'kaixin-stage-sync-ui.js' "$tmp/parent.html"
           grep -q 'kaixin-island-staging' "$tmp/kaixin-stage-auth.js"
           grep -q 'tgnznizqhheiwgdhvwdc' "$tmp/kaixin-stage-auth.js"
           if grep -R -q 'syqcpfjudjniripzcjdq' "$tmp"; then
