@@ -21,6 +21,12 @@ jobs:
     name: Verify isolated V2 static site
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout test recovery page
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: parent-password.html
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
       - name: Checkout pinned public staging code (NOT production main)
         uses: actions/checkout@v4
         with:
@@ -44,6 +50,7 @@ jobs:
           python3 .github/optimize_artwork.py
           node checks/build-kaixin-staging.cjs
           cp ../parent-password.html build/kaixin-staging/parent-password.html
+          test -s build/kaixin-staging/parent-password.html
           test -s build/kaixin-staging/assets/font-candidates/chill-ui.woff2
           test -s build/kaixin-staging/kaixin-stage-child.css
           test -s build/kaixin-staging/kaixin-stage-parent.css
